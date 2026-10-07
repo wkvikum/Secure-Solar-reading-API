@@ -1,7 +1,7 @@
 /**
  * SolarInstallaion.js
  *
- * Domain model: SolarInstallation
+ * Mongoose model: SolarInstallation
  * Relationship: SolarInstallation -> belongs to one Grid Substation;
  *               has many Generation Readings
  *
@@ -9,8 +9,9 @@
  *   meterId and inverterId are ATTRIBUTES of the SolarInstallation itself.
  *   There is deliberately NO separate "Device" model.
  *
- * Maps 1:1 to an `installations` entry in seed.json, e.g.
- *   { "id": "INST-0001", "name": "Colombo City Solar Plant 01",
+ * Backed by the `installations` collection written by src/seed/seedDatabase.js,
+ * e.g.
+ *   { "_id": ObjectId, "id": "INST-0001", "name": "Colombo City Solar Plant 01",
  *     "substationId": "SUB-01", "meterId": "MTR-000001",
  *     "inverterId": "INV-000001", "type": "Rooftop",
  *     "panelBrand": "JinkoSolar", "capacityKw": 344.8,
@@ -19,74 +20,53 @@
  * NOTE: the file name ("SolarInstallaion") is kept as-is to match the existing
  * project structure. It exports the correctly-named `SolarInstallation` model.
  *
- * Plain JS class (no Mongoose) so it works with the in-memory seed data.
+ * All static lookups now query MongoDB and return Promises resolving to lean
+ * plain objects (or null), keeping the same method names used by controllers.
  */
 
-const dataStore = require('./dataStore');
+const mongoose = require('mongoose');
+const { schemaOptions, PROJECTION } = require('./mongooseOptions');
 
-class SolarInstallation {
-  constructor({
-    id,
-    name,
-    substationId,
-    meterId,
-    inverterId,
-    type,
-    panelBrand,
-    capacityKw,
-    commissionDate,
-    status,
-  }) {
-    this.id = id;
-    this.name = name;
-    this.substationId = substationId; // foreign key -> GridSubstation.id
-    this.meterId = meterId; // device identifiers live on the installation
-    this.inverterId = inverterId; // (no separate Device entity)
-    this.type = type;
-    this.panelBrand = panelBrand;
-    this.capacityKw = capacityKw;
-    this.commissionDate = commissionDate;
-    this.status = status;
-  }
+const solarInstallationSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, unique: true, index: true },
+    name: { type: String, required: true },
+    substationId: { type: String, required: true, index: true }, // FK -> GridSubstation.id
+    meterId: { type: String }, // device identifiers live on the installation
+    inverterId: { type: String }, // (no separate Device entity)
+    type: { type: String },
+    panelBrand: { type: String },
+    capacityKw: { type: Number },
+    commissionDate: { type: String },
+    status: { type: String },
+  },
+  schemaOptions('installations')
+);
 
-  // Parent grid substation.
-  substation() {
-    return dataStore.findById('substations', this.substationId);
-  }
+const SolarInstallation = mongoose.model('SolarInstallation', solarInstallationSchema);
 
-  // Append-only generation readings for this installation,
-  // returned ordered by timestamp ascending.
-  readings() {
-    return dataStore
-      .readingsByInstallation(this.id)
-      .slice()
-      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-  }
+/**
+ * Find a single installation by its business id.
+ * @returns {Promise<Object|null>} lean plain object, or null when not found.
+ */
+SolarInstallation.findById = function findById(id) {
+  return SolarInstallation.findOne({ id }, PROJECTION).lean();
+};
 
-  // Convenience: the most recent reading (read-only view; readings themselves
-  // remain append-only in the separate collection).
-  latestReading() {
-    const list = this.readings();
-    return list.length ? list[list.length - 1] : null;
-  }
+/**
+ * Find all installations.
+ * @returns {Promise<Array<Object>>} lean plain objects.
+ */
+SolarInstallation.findAll = function findAll() {
+  return SolarInstallation.find({}, PROJECTION).lean();
+};
 
-  static fromSeed(raw) {
-    return new SolarInstallation(raw);
-  }
-
-  static findById(id) {
-    const raw = dataStore.findById('installations', id);
-    return raw ? SolarInstallation.fromSeed(raw) : null;
-  }
-
-  static findAll() {
-    return dataStore.findAll('installations').map(SolarInstallation.fromSeed);
-  }
-
-  // Installations belonging to a given substation.
-  static findBySubstation(substationId) {
-    return dataStore.installationsBySubstation(substationId).map(SolarInstallation.fromSeed);
-  }
-}
+/**
+ * Installations belonging to a given substation.
+ * @returns {Promise<Array<Object>>} lean plain objects.
+ */
+SolarInstallation.findBySubstation = function findBySubstation(substationId) {
+  return SolarInstallation.find({ substationId }, PROJECTION).lean();
+};
 
 module.exports = SolarInstallation;

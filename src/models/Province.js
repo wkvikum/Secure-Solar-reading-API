@@ -1,43 +1,48 @@
 /**
  * Province.js
  *
- * Domain model: Province
+ * Mongoose model: Province
  * Relationship: Province -> has many Districts
  *
- * Maps 1:1 to a `provinces` entry in seed.json, e.g.
- *   { "id": "PROV-01", "name": "Western", "capital": "Colombo" }
+ * Backed by the `provinces` collection written by src/seed/seedDatabase.js,
+ * e.g.
+ *   { "_id": ObjectId, "id": "PROV-01", "name": "Western", "capital": "Colombo" }
  *
- * Intentionally implemented as a plain JS class (no Mongoose) so the domain
- * layer works with the in-memory seed data. Later this can be backed by a
- * Mongoose document instead, without changing the controller-facing API.
+ * The persisted custom `id` field (not the Mongo ObjectId) is exposed as `id`
+ * so the JSON response shape matches the previous in-memory data layer.
+ *
+ * All static lookups now query MongoDB and return Promises resolving to lean
+ * plain objects (or null), keeping the same method names used by controllers.
  */
 
-const dataStore = require('./dataStore');
+const mongoose = require('mongoose');
+const { schemaOptions, PROJECTION } = require('./mongooseOptions');
 
-class Province {
-  constructor({ id, name, capital }) {
-    this.id = id;
-    this.name = name;
-    this.capital = capital;
-  }
+const provinceSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, unique: true, index: true },
+    name: { type: String, required: true },
+    capital: { type: String, required: true },
+  },
+  schemaOptions('provinces')
+);
 
-  // Districts that belong to this province (Province -> many Districts).
-  districts() {
-    return dataStore.districtsByProvince(this.id);
-  }
+const Province = mongoose.model('Province', provinceSchema);
 
-  static fromSeed(raw) {
-    return new Province(raw);
-  }
+/**
+ * Find a single province by its business id.
+ * @returns {Promise<Object|null>} lean plain object, or null when not found.
+ */
+Province.findById = function findById(id) {
+  return Province.findOne({ id }, PROJECTION).lean();
+};
 
-  static findById(id) {
-    const raw = dataStore.findById('provinces', id);
-    return raw ? Province.fromSeed(raw) : null;
-  }
-
-  static findAll() {
-    return dataStore.findAll('provinces').map(Province.fromSeed);
-  }
-}
+/**
+ * Find all provinces.
+ * @returns {Promise<Array<Object>>} lean plain objects.
+ */
+Province.findAll = function findAll() {
+  return Province.find({}, PROJECTION).lean();
+};
 
 module.exports = Province;
