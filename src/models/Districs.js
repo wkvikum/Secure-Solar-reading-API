@@ -17,7 +17,7 @@
  */
 
 const mongoose = require('mongoose');
-const { schemaOptions } = require('./mongooseOptions');
+const { schemaOptions, PROJECTION } = require('./mongooseOptions');
 
 const districtSchema = new mongoose.Schema(
   {
@@ -35,7 +35,7 @@ const District = mongoose.model('District', districtSchema);
  * @returns {Promise<Object|null>} lean plain object, or null when not found.
  */
 District.findById = function findById(id) {
-  return District.findOne({ id }).lean();
+  return District.findOne({ id }, PROJECTION).lean();
 };
 
 /**
@@ -43,7 +43,7 @@ District.findById = function findById(id) {
  * @returns {Promise<Array<Object>>} lean plain objects.
  */
 District.findAll = function findAll() {
-  return District.find({}).lean();
+  return District.find({}, PROJECTION).lean();
 };
 
 /**
@@ -51,7 +51,7 @@ District.findAll = function findAll() {
  * @returns {Promise<Array<Object>>} lean plain objects.
  */
 District.findByProvince = function findByProvince(provinceId) {
-  return District.find({ provinceId }).lean();
+  return District.find({ provinceId }, PROJECTION).lean();
 };
 
 module.exports = District;

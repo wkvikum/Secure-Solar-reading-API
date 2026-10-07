@@ -16,7 +16,7 @@
  */
 
 const mongoose = require('mongoose');
-const { schemaOptions } = require('./mongooseOptions');
+const { schemaOptions, PROJECTION } = require('./mongooseOptions');
 
 const provinceSchema = new mongoose.Schema(
   {
@@ -34,7 +34,7 @@ const Province = mongoose.model('Province', provinceSchema);
  * @returns {Promise<Object|null>} lean plain object, or null when not found.
  */
 Province.findById = function findById(id) {
-  return Province.findOne({ id }).lean();
+  return Province.findOne({ id }, PROJECTION).lean();
 };
 
 /**
@@ -42,7 +42,7 @@ Province.findById = function findById(id) {
  * @returns {Promise<Array<Object>>} lean plain objects.
  */
 Province.findAll = function findAll() {
-  return Province.find({}).lean();
+  return Province.find({}, PROJECTION).lean();
 };
 
 module.exports = Province;

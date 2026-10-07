@@ -25,7 +25,7 @@
  */
 
 const mongoose = require('mongoose');
-const { schemaOptions } = require('./mongooseOptions');
+const { schemaOptions, PROJECTION } = require('./mongooseOptions');
 
 const solarInstallationSchema = new mongoose.Schema(
   {
@@ -50,7 +50,7 @@ const SolarInstallation = mongoose.model('SolarInstallation', solarInstallationS
  * @returns {Promise<Object|null>} lean plain object, or null when not found.
  */
 SolarInstallation.findById = function findById(id) {
-  return SolarInstallation.findOne({ id }).lean();
+  return SolarInstallation.findOne({ id }, PROJECTION).lean();
 };
 
 /**
@@ -58,7 +58,7 @@ SolarInstallation.findById = function findById(id) {
  * @returns {Promise<Array<Object>>} lean plain objects.
  */
 SolarInstallation.findAll = function findAll() {
-  return SolarInstallation.find({}).lean();
+  return SolarInstallation.find({}, PROJECTION).lean();
 };
 
 /**
@@ -66,7 +66,7 @@ SolarInstallation.findAll = function findAll() {
  * @returns {Promise<Array<Object>>} lean plain objects.
  */
 SolarInstallation.findBySubstation = function findBySubstation(substationId) {
-  return SolarInstallation.find({ substationId }).lean();
+  return SolarInstallation.find({ substationId }, PROJECTION).lean();
 };
 
 module.exports = SolarInstallation;

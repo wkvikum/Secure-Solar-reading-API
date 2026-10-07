@@ -37,4 +37,16 @@ function schemaOptions(collectionName) {
   };
 }
 
-module.exports = { schemaOptions };
+/**
+ * Shared projection used by every `.lean()` read query.
+ *
+ * `.lean()` returns plain JS objects and therefore BYPASSES the schema's
+ * `toJSON` transform, which means the Mongo-internal `_id` would otherwise leak
+ * into API responses. Excluding it here keeps the response shape identical to
+ * the previous in-memory data layer (custom `id` only, no `_id` / `__v`).
+ *
+ * It must be spread into each query, e.g. `Model.find(filter, PROJECTION)`.
+ */
+const PROJECTION = { _id: 0, __v: 0 };
+
+module.exports = { schemaOptions, PROJECTION };

@@ -18,7 +18,7 @@
  */
 
 const mongoose = require('mongoose');
-const { schemaOptions } = require('./mongooseOptions');
+const { schemaOptions, PROJECTION } = require('./mongooseOptions');
 
 const gridSubstationSchema = new mongoose.Schema(
   {
@@ -38,7 +38,7 @@ const GridSubstation = mongoose.model('GridSubstation', gridSubstationSchema);
  * @returns {Promise<Object|null>} lean plain object, or null when not found.
  */
 GridSubstation.findById = function findById(id) {
-  return GridSubstation.findOne({ id }).lean();
+  return GridSubstation.findOne({ id }, PROJECTION).lean();
 };
 
 /**
@@ -46,7 +46,7 @@ GridSubstation.findById = function findById(id) {
  * @returns {Promise<Array<Object>>} lean plain objects.
  */
 GridSubstation.findAll = function findAll() {
-  return GridSubstation.find({}).lean();
+  return GridSubstation.find({}, PROJECTION).lean();
 };
 
 /**
@@ -54,7 +54,7 @@ GridSubstation.findAll = function findAll() {
  * @returns {Promise<Array<Object>>} lean plain objects.
  */
 GridSubstation.findByDistrict = function findByDistrict(districtId) {
-  return GridSubstation.find({ districtId }).lean();
+  return GridSubstation.find({ districtId }, PROJECTION).lean();
 };
 
 module.exports = GridSubstation;

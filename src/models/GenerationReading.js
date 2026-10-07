@@ -28,7 +28,7 @@
  */
 
 const mongoose = require('mongoose');
-const { schemaOptions } = require('./mongooseOptions');
+const { schemaOptions, PROJECTION } = require('./mongooseOptions');
 
 const generationReadingSchema = new mongoose.Schema(
   {
@@ -49,7 +49,7 @@ const GenerationReading = mongoose.model('GenerationReading', generationReadingS
  * @returns {Promise<Object|null>} lean plain object, or null when not found.
  */
 GenerationReading.findById = function findById(id) {
-  return GenerationReading.findOne({ id }).lean();
+  return GenerationReading.findOne({ id }, PROJECTION).lean();
 };
 
 /**
@@ -57,7 +57,7 @@ GenerationReading.findById = function findById(id) {
  * @returns {Promise<Array<Object>>} lean plain objects.
  */
 GenerationReading.findAll = function findAll() {
-  return GenerationReading.find({}).lean();
+  return GenerationReading.find({}, PROJECTION).lean();
 };
 
 /**
@@ -65,7 +65,7 @@ GenerationReading.findAll = function findAll() {
  * @returns {Promise<Array<Object>>} lean plain objects.
  */
 GenerationReading.findByInstallation = function findByInstallation(installationId) {
-  return GenerationReading.find({ installationId }).sort({ timestamp: 1 }).lean();
+  return GenerationReading.find({ installationId }, PROJECTION).sort({ timestamp: 1 }).lean();
 };
 
 module.exports = GenerationReading;
