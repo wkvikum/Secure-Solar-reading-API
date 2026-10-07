@@ -1,58 +1,60 @@
 /**
  * Gridsubstation.js
  *
- * Domain model: GridSubstation
+ * Mongoose model: GridSubstation
  * Relationship: GridSubstation -> belongs to one District;
  *               has many Solar Installations
  *
- * Maps 1:1 to a `substations` entry in seed.json, e.g.
- *   { "id": "SUB-01", "name": "Colombo City Grid Substation",
+ * Backed by the `substations` collection written by src/seed/seedDatabase.js,
+ * e.g.
+ *   { "_id": ObjectId, "id": "SUB-01", "name": "Colombo City Grid Substation",
  *     "districtId": "DIST-01", "capacityMva": 150, "voltageKv": 132 }
  *
  * NOTE: the file name ("Gridsubstation") is kept as-is to match the existing
  * project structure. It exports the correctly-named `GridSubstation` model.
  *
- * Plain JS class (no Mongoose) so it works with the in-memory seed data.
+ * All static lookups now query MongoDB and return Promises resolving to lean
+ * plain objects (or null), keeping the same method names used by controllers.
  */
 
-const dataStore = require('./dataStore');
+const mongoose = require('mongoose');
+const { schemaOptions } = require('./mongooseOptions');
 
-class GridSubstation {
-  constructor({ id, name, districtId, capacityMva, voltageKv }) {
-    this.id = id;
-    this.name = name;
-    this.districtId = districtId; // foreign key -> District.id
-    this.capacityMva = capacityMva;
-    this.voltageKv = voltageKv;
-  }
+const gridSubstationSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, unique: true, index: true },
+    name: { type: String, required: true },
+    districtId: { type: String, required: true, index: true }, // FK -> District.id
+    capacityMva: { type: Number },
+    voltageKv: { type: Number },
+  },
+  schemaOptions('substations')
+);
 
-  // Parent district (GridSubstation -> one District).
-  district() {
-    return dataStore.findById('districts', this.districtId);
-  }
+const GridSubstation = mongoose.model('GridSubstation', gridSubstationSchema);
 
-  // Solar installations connected to this substation.
-  installations() {
-    return dataStore.installationsBySubstation(this.id);
-  }
+/**
+ * Find a single substation by its business id.
+ * @returns {Promise<Object|null>} lean plain object, or null when not found.
+ */
+GridSubstation.findById = function findById(id) {
+  return GridSubstation.findOne({ id }).lean();
+};
 
-  static fromSeed(raw) {
-    return new GridSubstation(raw);
-  }
+/**
+ * Find all substations.
+ * @returns {Promise<Array<Object>>} lean plain objects.
+ */
+GridSubstation.findAll = function findAll() {
+  return GridSubstation.find({}).lean();
+};
 
-  static findById(id) {
-    const raw = dataStore.findById('substations', id);
-    return raw ? GridSubstation.fromSeed(raw) : null;
-  }
-
-  static findAll() {
-    return dataStore.findAll('substations').map(GridSubstation.fromSeed);
-  }
-
-  // Substations belonging to a given district.
-  static findByDistrict(districtId) {
-    return dataStore.substationsByDistrict(districtId).map(GridSubstation.fromSeed);
-  }
-}
+/**
+ * Substations belonging to a given district.
+ * @returns {Promise<Array<Object>>} lean plain objects.
+ */
+GridSubstation.findByDistrict = function findByDistrict(districtId) {
+  return GridSubstation.find({ districtId }).lean();
+};
 
 module.exports = GridSubstation;

@@ -1,55 +1,57 @@
 /**
  * Districs.js
  *
- * Domain model: District
+ * Mongoose model: District
  * Relationship: District -> belongs to one Province; has many Grid Substations
  *
- * Maps 1:1 to a `districts` entry in seed.json, e.g.
- *   { "id": "DIST-01", "name": "Colombo", "provinceId": "PROV-01" }
+ * Backed by the `districts` collection written by src/seed/seedDatabase.js,
+ * e.g.
+ *   { "_id": ObjectId, "id": "DIST-01", "name": "Colombo", "provinceId": "PROV-01" }
  *
  * NOTE: the file name ("Districs") is kept as-is to match the existing project
  * structure and avoid breaking references. It exports the correctly-named
- * `District` domain model for the coursework.
+ * `District` Mongoose model for the coursework.
  *
- * Plain JS class (no Mongoose) so it works with the in-memory seed data.
+ * All static lookups now query MongoDB and return Promises resolving to lean
+ * plain objects (or null), keeping the same method names used by controllers.
  */
 
-const dataStore = require('./dataStore');
+const mongoose = require('mongoose');
+const { schemaOptions } = require('./mongooseOptions');
 
-class District {
-  constructor({ id, name, provinceId }) {
-    this.id = id;
-    this.name = name;
-    this.provinceId = provinceId; // foreign key -> Province.id
-  }
+const districtSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, unique: true, index: true },
+    name: { type: String, required: true },
+    provinceId: { type: String, required: true, index: true }, // FK -> Province.id
+  },
+  schemaOptions('districts')
+);
 
-  // Parent province (District -> one Province).
-  province() {
-    return dataStore.findById('provinces', this.provinceId);
-  }
+const District = mongoose.model('District', districtSchema);
 
-  // Grid substations in this district (District -> many Grid Substations).
-  substations() {
-    return dataStore.substationsByDistrict(this.id);
-  }
+/**
+ * Find a single district by its business id.
+ * @returns {Promise<Object|null>} lean plain object, or null when not found.
+ */
+District.findById = function findById(id) {
+  return District.findOne({ id }).lean();
+};
 
-  static fromSeed(raw) {
-    return new District(raw);
-  }
+/**
+ * Find all districts.
+ * @returns {Promise<Array<Object>>} lean plain objects.
+ */
+District.findAll = function findAll() {
+  return District.find({}).lean();
+};
 
-  static findById(id) {
-    const raw = dataStore.findById('districts', id);
-    return raw ? District.fromSeed(raw) : null;
-  }
-
-  static findAll() {
-    return dataStore.findAll('districts').map(District.fromSeed);
-  }
-
-  // Districts belonging to a given province.
-  static findByProvince(provinceId) {
-    return dataStore.districtsByProvince(provinceId).map(District.fromSeed);
-  }
-}
+/**
+ * Districts belonging to a given province.
+ * @returns {Promise<Array<Object>>} lean plain objects.
+ */
+District.findByProvince = function findByProvince(provinceId) {
+  return District.find({ provinceId }).lean();
+};
 
 module.exports = District;
