@@ -16,21 +16,21 @@ const District = require('../models/Districs');
 const SolarInstallation = require('../models/SolarInstallaion');
 
 // GET /api/substations
-function listSubstations(req, res) {
+async function listSubstations(req, res) {
   try {
     const { districtId } = req.query;
 
     // Optional scoping: filter substations by district query parameter.
     if (districtId) {
-      const district = District.findById(districtId);
+      const district = await District.findById(districtId);
       if (!district) {
         return res.status(404).json({ error: `District ${districtId} not found` });
       }
-      const substations = GridSubstation.findByDistrict(districtId);
+      const substations = await GridSubstation.findByDistrict(districtId);
       return res.status(200).json({ count: substations.length, data: substations });
     }
 
-    const substations = GridSubstation.findAll();
+    const substations = await GridSubstation.findAll();
     return res.status(200).json({ count: substations.length, data: substations });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to retrieve substations', details: err.message });
@@ -38,7 +38,7 @@ function listSubstations(req, res) {
 }
 
 // GET /api/substations/:substationId
-function getSubstationById(req, res) {
+async function getSubstationById(req, res) {
   try {
     const { substationId } = req.params;
 
@@ -46,7 +46,7 @@ function getSubstationById(req, res) {
       return res.status(400).json({ error: 'substationId parameter is required' });
     }
 
-    const substation = GridSubstation.findById(substationId);
+    const substation = await GridSubstation.findById(substationId);
     if (!substation) {
       return res.status(404).json({ error: `Substation ${substationId} not found` });
     }
@@ -58,7 +58,7 @@ function getSubstationById(req, res) {
 }
 
 // GET /api/substations/:substationId/installations  (nested/scoped resource)
-function listSubstationInstallations(req, res) {
+async function listSubstationInstallations(req, res) {
   try {
     const { substationId } = req.params;
 
@@ -66,12 +66,12 @@ function listSubstationInstallations(req, res) {
       return res.status(400).json({ error: 'substationId parameter is required' });
     }
 
-    const substation = GridSubstation.findById(substationId);
+    const substation = await GridSubstation.findById(substationId);
     if (!substation) {
       return res.status(404).json({ error: `Substation ${substationId} not found` });
     }
 
-    const installations = SolarInstallation.findBySubstation(substationId);
+    const installations = await SolarInstallation.findBySubstation(substationId);
     return res.status(200).json({ count: installations.length, data: installations });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to retrieve installations for substation', details: err.message });

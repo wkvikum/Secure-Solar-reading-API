@@ -16,21 +16,21 @@ const GridSubstation = require('../models/Gridsubstation');
 const GenerationReading = require('../models/GenerationReading');
 
 // GET /api/installations
-function listInstallations(req, res) {
+async function listInstallations(req, res) {
   try {
     const { substationId } = req.query;
 
     // Optional scoping: filter installations by substation query parameter.
     if (substationId) {
-      const substation = GridSubstation.findById(substationId);
+      const substation = await GridSubstation.findById(substationId);
       if (!substation) {
         return res.status(404).json({ error: `Substation ${substationId} not found` });
       }
-      const installations = SolarInstallation.findBySubstation(substationId);
+      const installations = await SolarInstallation.findBySubstation(substationId);
       return res.status(200).json({ count: installations.length, data: installations });
     }
 
-    const installations = SolarInstallation.findAll();
+    const installations = await SolarInstallation.findAll();
     return res.status(200).json({ count: installations.length, data: installations });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to retrieve installations', details: err.message });
@@ -38,7 +38,7 @@ function listInstallations(req, res) {
 }
 
 // GET /api/installations/:installationId
-function getInstallationById(req, res) {
+async function getInstallationById(req, res) {
   try {
     const { installationId } = req.params;
 
@@ -46,7 +46,7 @@ function getInstallationById(req, res) {
       return res.status(400).json({ error: 'installationId parameter is required' });
     }
 
-    const installation = SolarInstallation.findById(installationId);
+    const installation = await SolarInstallation.findById(installationId);
     if (!installation) {
       return res.status(404).json({ error: `Installation ${installationId} not found` });
     }
@@ -58,7 +58,7 @@ function getInstallationById(req, res) {
 }
 
 // GET /api/installations/:installationId/readings  (nested/scoped resource)
-function listInstallationReadings(req, res) {
+async function listInstallationReadings(req, res) {
   try {
     const { installationId } = req.params;
 
@@ -66,12 +66,12 @@ function listInstallationReadings(req, res) {
       return res.status(400).json({ error: 'installationId parameter is required' });
     }
 
-    const installation = SolarInstallation.findById(installationId);
+    const installation = await SolarInstallation.findById(installationId);
     if (!installation) {
       return res.status(404).json({ error: `Installation ${installationId} not found` });
     }
 
-    const readings = GenerationReading.findByInstallation(installationId);
+    const readings = await GenerationReading.findByInstallation(installationId);
     return res.status(200).json({ count: readings.length, data: readings });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to retrieve readings for installation', details: err.message });

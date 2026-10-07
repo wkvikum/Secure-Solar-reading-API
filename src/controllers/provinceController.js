@@ -11,7 +11,7 @@
  * Responsibilities:
  *   - receive req/res
  *   - validate required route parameters
- *   - delegate to the existing Province model
+ *   - delegate to the Mongoose Province model (queries MongoDB)
  *   - return JSON responses with appropriate HTTP status codes
  *   - handle errors consistently (404 for missing, 500 for unexpected)
  */
@@ -20,9 +20,9 @@ const Province = require('../models/Province');
 const District = require('../models/Districs');
 
 // GET /api/provinces
-function listProvinces(req, res) {
+async function listProvinces(req, res) {
   try {
-    const provinces = Province.findAll();
+    const provinces = await Province.findAll();
     return res.status(200).json({ count: provinces.length, data: provinces });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to retrieve provinces', details: err.message });
@@ -30,7 +30,7 @@ function listProvinces(req, res) {
 }
 
 // GET /api/provinces/:provinceId
-function getProvinceById(req, res) {
+async function getProvinceById(req, res) {
   try {
     const { provinceId } = req.params;
 
@@ -38,7 +38,7 @@ function getProvinceById(req, res) {
       return res.status(400).json({ error: 'provinceId parameter is required' });
     }
 
-    const province = Province.findById(provinceId);
+    const province = await Province.findById(provinceId);
     if (!province) {
       return res.status(404).json({ error: `Province ${provinceId} not found` });
     }
@@ -50,7 +50,7 @@ function getProvinceById(req, res) {
 }
 
 // GET /api/provinces/:provinceId/districts  (nested/scoped resource)
-function listProvinceDistricts(req, res) {
+async function listProvinceDistricts(req, res) {
   try {
     const { provinceId } = req.params;
 
@@ -58,12 +58,12 @@ function listProvinceDistricts(req, res) {
       return res.status(400).json({ error: 'provinceId parameter is required' });
     }
 
-    const province = Province.findById(provinceId);
+    const province = await Province.findById(provinceId);
     if (!province) {
       return res.status(404).json({ error: `Province ${provinceId} not found` });
     }
 
-    const districts = District.findByProvince(provinceId);
+    const districts = await District.findByProvince(provinceId);
     return res.status(200).json({ count: districts.length, data: districts });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to retrieve districts for province', details: err.message });
