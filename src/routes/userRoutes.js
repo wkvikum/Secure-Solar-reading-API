@@ -14,5 +14,7 @@ router.get('/', userController.listUsers);
 
 // Individual resource
 router.get('/:userId', userController.getUserById);
+router.delete('/:userId', userController.deleteUser);
 
 module.exports = router;
+

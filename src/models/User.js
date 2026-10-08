@@ -61,5 +61,18 @@ User.findByUsername = function findByUsername(username) {
 User.findAll = function findAll() {
   return User.find({}, PROJECTION).lean();
 };
+
+/**
+ * Delete a single user by its business id.
+ * @returns {Promise<Object|null>} the deleted lean plain object, or null when
+ *   no user with that id existed.
+ */
+User.deleteById = function deleteById(id) {
+  // Pass PROJECTION as the query options projection so Mongo `_id` / `__v` are
+  // stripped from the returned document, matching the other lean read queries.
+  return User.findOneAndDelete({ id }, { projection: PROJECTION }).lean();
+};
+
 module.exports = User;
+
 

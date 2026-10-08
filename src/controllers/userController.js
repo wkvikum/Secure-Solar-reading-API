@@ -4,10 +4,12 @@
  * Request handling for the User resource.
  *
  * Routes (mounted under /api/users):
- *   GET  /api/users            -> listUsers     (collection)
- *   GET  /api/users/:userId    -> getUserById   (individual)
+ *   GET    /api/users            -> listUsers     (collection)
+ *   GET    /api/users/:userId    -> getUserById   (individual)
+ *   DELETE /api/users/:userId    -> deleteUser    (individual)
  *
- * Read-only for now; authentication/authorisation is not yet implemented.
+ * Reading and deletion are implemented; authentication/authorisation is not yet
+ * implemented.
  */
 
 const User = require('../models/User');
@@ -42,7 +44,29 @@ async function getUserById(req, res) {
   }
 }
 
+// DELETE /api/users/:userId
+async function deleteUser(req, res) {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId parameter is required' });
+    }
+
+    const user = await User.deleteById(userId);
+    if (!user) {
+      return res.status(404).json({ error: `User ${userId} not found` });
+    }
+
+    return res.status(204).send();
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to delete user', details: err.message });
+  }
+}
+
 module.exports = {
   listUsers,
   getUserById,
+  deleteUser,
 };
+
