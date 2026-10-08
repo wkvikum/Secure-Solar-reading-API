@@ -1,61 +1,65 @@
 /**
  * User.js
  *
- * Domain model: User
+ * Mongoose model: User
  * Relationship: User -> may be assigned to one or more Grid Substations
  *               (optional linkage used later for authorisation scoping)
  *
- * Maps 1:1 to a `users` entry in seed.json, e.g.
- *   { "id": "USER-01", "username": "admin", "fullName": "System Administrator",
- *     "email": "admin@solargrid.lk", "role": "admin",
- *     "passwordHash": "$2a$10$..." }
+ * Backed by the `users` collection, e.g.
+ *   { "_id": ObjectId, "id": "USER-01", "username": "admin",
+ *     "fullName": "System Administrator", "email": "admin@solargrid.lk",
+ *     "role": "admin", "passwordHash": "$2a$10$...", "roleId": "national" }
  *   Some users also include: "assignedSubstationIds": ["SUB-01", "SUB-02"]
  *
- * Kept free of auth logic (no JWT/bcrypt) for now.
+ * `roleId` carries the access scope for the user, e.g. "national" (SLSEA HQ)
+ * or a province id ("PROV-01"). Kept free of auth logic (no JWT/bcrypt
+ * validation) for now.
  *
- * Plain JS class (no Mongoose) so it works with the in-memory seed data.
+ * All static lookups query MongoDB and return Promises resolving to lean plain
+ * objects (or null), keeping the same method names used by controllers.
  */
 
-const dataStore = require('./dataStore');
+const mongoose = require('mongoose');
+const { schemaOptions, PROJECTION } = require('./mongooseOptions');
 
-class User {
-  constructor({ id, username, fullName, email, role, passwordHash, assignedSubstationIds }) {
-    this.id = id;
-    this.username = username;
-    this.fullName = fullName;
-    this.email = email;
-    this.role = role;
-    this.passwordHash = passwordHash;
-    // Optional: substations this user is responsible for (not present on all).
-    this.assignedSubstationIds = assignedSubstationIds || [];
-  }
+const userSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, unique: true, index: true },
+    username: { type: String, required: true },
+    fullName: { type: String },
+    email: { type: String },
+    role: { type: String }, // e.g. "admin", "operator"
+    passwordHash: { type: String }, // stored credential; not validated here yet
+    roleId: { type: String }, // access scope, e.g. "national" or "PROV-01"
+    assignedSubstationIds: { type: [String], default: undefined }, // optional scoping
+  },
+  schemaOptions('users')
+);
 
-  // Grid substations assigned to this user.
-  assignedSubstations() {
-    return this.assignedSubstationIds
-      .map((id) => dataStore.findById('substations', id))
-      .filter(Boolean);
-  }
+const User = mongoose.model('User', userSchema);
 
-  static fromSeed(raw) {
-    return new User(raw);
-  }
+/**
+ * Find a single user by its business id.
+ * @returns {Promise<Object|null>} lean plain object, or null when not found.
+ */
+User.findById = function findById(id) {
+  return User.findOne({ id }, PROJECTION).lean();
+};
 
-  static findById(id) {
-    const raw = dataStore.findById('users', id);
-    return raw ? User.fromSeed(raw) : null;
-  }
+/**
+ * Find a single user by username (used later for authentication).
+ * @returns {Promise<Object|null>} lean plain object, or null when not found.
+ */
+User.findByUsername = function findByUsername(username) {
+  return User.findOne({ username }, PROJECTION).lean();
+};
 
-  // NOTE: named findByUsername to avoid clashing with a potential instance field.
-  static findByUsername(username) {
-    const raw = dataStore.findOneBy('users', (u) => u.username === username);
-    return raw ? User.fromSeed(raw) : null;
-  }
-
-  static findAll() {
-    return dataStore.findAll('users').map(User.fromSeed);
-  }
-}
-
+/**
+ * Find all users.
+ * @returns {Promise<Array<Object>>} lean plain objects.
+ */
+User.findAll = function findAll() {
+  return User.find({}, PROJECTION).lean();
+};
 module.exports = User;
 

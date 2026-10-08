@@ -69,4 +69,33 @@ SolarInstallation.findBySubstation = function findBySubstation(substationId) {
   return SolarInstallation.find({ substationId }, PROJECTION).lean();
 };
 
+/**
+ * Find an existing installation that uses any of the given unique identifiers
+ * (`id`, `meterId`, `inverterId`). Used to prevent duplicate devices/records.
+ * Only the provided (non-empty) identifiers are checked.
+ * @param {{id?: string, meterId?: string, inverterId?: string}} identifiers
+ * @returns {Promise<Object|null>} the first conflicting installation, or null.
+ */
+SolarInstallation.findByUniqueIdentifiers = function findByUniqueIdentifiers(identifiers) {
+  const clauses = [];
+  if (identifiers.id) clauses.push({ id: identifiers.id });
+  if (identifiers.meterId) clauses.push({ meterId: identifiers.meterId });
+  if (identifiers.inverterId) clauses.push({ inverterId: identifiers.inverterId });
+  if (clauses.length === 0) return Promise.resolve(null);
+
+  return SolarInstallation.findOne({ $or: clauses }, PROJECTION).lean();
+};
+
+/**
+ * Create a new installation and return it as a lean plain object (custom `id`
+ * only, no Mongo-internal `_id` / `__v`), matching the GET endpoints' shape.
+ * @param {Object} data validated installation fields.
+ * @returns {Promise<Object>} the created installation.
+ */
+SolarInstallation.createInstallation = async function createInstallation(data) {
+  const created = await SolarInstallation.create(data);
+  return SolarInstallation.findById(created.id);
+};
+
 module.exports = SolarInstallation;
+

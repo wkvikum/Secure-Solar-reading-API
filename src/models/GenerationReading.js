@@ -68,4 +68,18 @@ GenerationReading.findByInstallation = function findByInstallation(installationI
   return GenerationReading.find({ installationId }, PROJECTION).sort({ timestamp: 1 }).lean();
 };
 
+/**
+ * Append a new reading. GenerationReading is APPEND-ONLY: this only ever
+ * inserts a new document and never updates or replaces an existing one.
+ * @param {Object} data validated reading fields.
+ * @returns {Promise<Object>} the created doc as a lean plain object.
+ */
+GenerationReading.createReading = async function createReading(data) {
+  const created = await GenerationReading.create(data);
+  // Re-read as a lean object so the response shape matches the GET endpoints
+  // (custom `id` only, no Mongo-internal `_id` / `__v`) despite `.lean()`.
+  return GenerationReading.findById(created.id);
+};
+
 module.exports = GenerationReading;
+

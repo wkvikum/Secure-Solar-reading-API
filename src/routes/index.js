@@ -13,11 +13,14 @@ const districtRoutes = require('./districtRoutes');
 const substationRoutes = require('./substationRoutes');
 const installationRoutes = require('./installationRoutes');
 const readingRoutes = require('./readingRoutes');
+const userRoutes = require('./userRoutes');
 
 router.use('/provinces', provinceRoutes);
 router.use('/districts', districtRoutes);
 router.use('/substations', substationRoutes);
 router.use('/installations', installationRoutes);
 router.use('/readings', readingRoutes);
+router.use('/users', userRoutes);
 
 module.exports = router;
+
