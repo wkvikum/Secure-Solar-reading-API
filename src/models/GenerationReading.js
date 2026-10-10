@@ -61,6 +61,29 @@ GenerationReading.findAll = function findAll() {
 };
 
 /**
+ * Find a single page of readings using efficient MongoDB skip/limit queries.
+ *
+ * Uses `countDocuments` for the total and a `skip`/`limit` window for the data
+ * so the server never loads the whole collection into memory.
+ *
+ * @param {Object} options
+ * @param {number} options.page 1-based page number (>= 1).
+ * @param {number} options.limit Maximum number of documents per page (>= 1).
+ * @returns {Promise<{ readings: Array<Object>, totalCount: number }>}
+ *   The page of lean plain objects plus the total number of documents.
+ */
+GenerationReading.findAllPaginated = async function findAllPaginated({ page, limit }) {
+  const skip = (page - 1) * limit;
+
+  const [readings, totalCount] = await Promise.all([
+    GenerationReading.find({}, PROJECTION).skip(skip).limit(limit).lean(),
+    GenerationReading.countDocuments({}),
+  ]);
+
+  return { readings, totalCount };
+};
+
+/**
  * Readings for a given installation, ordered by timestamp ascending.
  * @returns {Promise<Array<Object>>} lean plain objects.
  */
