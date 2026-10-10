@@ -31,8 +31,8 @@ async function createUser(req, res) {
     const { id, name, email, role, roleId, active, passwordHash, assignedSubstationIds } = req.body || {};
 
     // Required fields.
-    if (!id || !name) {
-      return res.status(400).json({ error: 'Fields "id" and "name" are required' });
+    if (!id || !name || !role || !roleId) {
+      return res.status(400).json({ error: 'Fields "id", "name", "role" and "roleId" are required' });
     }
 
     // Reject duplicates up-front for a clean 409 response.

@@ -27,9 +27,9 @@ const userSchema = new mongoose.Schema(
     id: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
     email: { type: String },
-    role: { type: String }, // e.g. "admin", "operator"
+    role: { type: String, required: true }, // e.g. "admin", "operator"
     passwordHash: { type: String }, // stored credential; not validated here yet
-    roleId: { type: String }, // access scope, e.g. "national" or "PROV-01"
+    roleId: { type: String, required: true }, // access scope, e.g. "national" or "PROV-01"
     active: { type: Boolean }, // whether the account is enabled
     assignedSubstationIds: { type: [String], default: undefined }, // optional scoping
   },
@@ -89,4 +89,5 @@ User.deleteById = function deleteById(id) {
 };
 
 module.exports = User;
+
 
