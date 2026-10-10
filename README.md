@@ -364,15 +364,14 @@ These scales are based on the coursework requirements.
 
 ## 📚 API Documentation
 
-Interactive API documentation is available through Swagger/OpenAPI:
+Interactive API documentation is available through Swagger/OpenAPI (OpenAPI 3.0):
 
-**Swagger UI:**  
-`YOUR_SWAGGER_URL`
+**Swagger UI:** `http://localhost:3000/api-docs`
+**OpenAPI JSON:** `http://localhost:3000/api-docs.json`
 
-**Deployed API:**  
-`YOUR_DEPLOYED_API_URL`
-
-Replace the above URLs with the actual deployment URLs before submission.
+When deployed, replace `http://localhost:3000` with your deployed base URL (or set
+the `SWAGGER_SERVER_URL` / `BASE_URL` environment variable so the spec lists the
+deployed server automatically).
 
 The coursework requires the Swagger/OpenAPI surface to be available from the deployed API.
 

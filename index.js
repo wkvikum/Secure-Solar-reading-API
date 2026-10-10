@@ -5,14 +5,42 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
 
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./src/config/swagger');
+
 const apiRouter = require('./src/routes');
 const { connectDB, disconnectDB } = require('./src/config/db');
 
 app.use(express.json());
 
+/**
+ * @openapi
+ * /:
+ *   get:
+ *     tags: [System]
+ *     summary: Service health check
+ *     description: Returns a small status payload confirming the API is reachable.
+ *     responses:
+ *       200:
+ *         description: The service is up.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: ok }
+ *                 session: { type: string, example: NB6007CEM S2 }
+ */
 app.get('/', (req, res) => {
   res.json({ status: 'ok', session: 'NB6007CEM S2' });
 });
+
+// Interactive OpenAPI documentation (Swagger UI) and the raw OpenAPI document.
+// Served outside /api so the API namespace stays reserved for resources.
+app.get('/api-docs.json', (req, res) => {
+  res.json(swaggerSpec);
+});
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // All resource endpoints are namespaced under /api
 app.use('/api', apiRouter);
@@ -43,3 +71,4 @@ async function start() {
 }
 
 start();
+
