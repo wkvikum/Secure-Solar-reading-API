@@ -54,4 +54,16 @@ District.findByProvince = function findByProvince(provinceId) {
   return District.find({ provinceId }, PROJECTION).lean();
 };
 
+/**
+ * Find districts matching optional filters. Both filters are optional and may be
+ * combined; when neither is provided every district is returned.
+ * @param {{provinceId?: string}} [filters]
+ * @returns {Promise<Array<Object>>} lean plain objects.
+ */
+District.findByFilters = function findByFilters(filters = {}) {
+  const query = {};
+  if (filters.provinceId) query.provinceId = filters.provinceId;
+  return District.find(query, PROJECTION).lean();
+};
+
 module.exports = District;

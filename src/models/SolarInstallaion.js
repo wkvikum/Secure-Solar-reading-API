@@ -70,6 +70,25 @@ SolarInstallation.findBySubstation = function findBySubstation(substationId) {
 };
 
 /**
+ * Find installations matching optional filters. All filters are optional and may
+ * be combined; when none is provided every installation is returned.
+ * @param {{substationId?: string, substationIds?: string[]}} [filters]
+ *   `substationId` matches a single substation; `substationIds` matches any
+ *   substation in the list (used for district/province-scoped lookups resolved
+ *   to their substations upstream).
+ * @returns {Promise<Array<Object>>} lean plain objects.
+ */
+SolarInstallation.findByFilters = function findByFilters(filters = {}) {
+  const query = {};
+  if (filters.substationId) {
+    query.substationId = filters.substationId;
+  } else if (Array.isArray(filters.substationIds)) {
+    query.substationId = { $in: filters.substationIds };
+  }
+  return SolarInstallation.find(query, PROJECTION).lean();
+};
+
+/**
  * Find an existing installation that uses any of the given unique identifiers
  * (`id`, `meterId`, `inverterId`). Used to prevent duplicate devices/records.
  * Only the provided (non-empty) identifiers are checked.

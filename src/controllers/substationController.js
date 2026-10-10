@@ -8,29 +8,64 @@
  *   GET  /api/substations/:substationId                -> getSubstationById (individual)
  *   GET  /api/substations/:substationId/installations  -> listSubstationInstallations (nested)
  *
- * Optionally, listSubstations supports ?districtId=... to filter the collection.
+ * Optionally, listSubstations supports ?provinceId=... and/or ?districtId=...
+ * to filter the collection (individually or combined).
  */
 
 const GridSubstation = require('../models/Gridsubstation');
 const District = require('../models/Districs');
+const Province = require('../models/Province');
 const SolarInstallation = require('../models/SolarInstallaion');
 
 // GET /api/substations
+// Optional filters (each independently or together):
+//   ?districtId=...  -> substations directly in that district
+//   ?provinceId=...  -> substations in any district of that province
+// With no filters, all substations are returned.
 async function listSubstations(req, res) {
   try {
-    const { districtId } = req.query;
+    const { provinceId, districtId } = req.query;
 
-    // Optional scoping: filter substations by district query parameter.
+    // Validate districtId when supplied.
     if (districtId) {
       const district = await District.findById(districtId);
       if (!district) {
         return res.status(404).json({ error: `District ${districtId} not found` });
       }
-      const substations = await GridSubstation.findByDistrict(districtId);
-      return res.status(200).json({ count: substations.length, data: substations });
     }
 
-    const substations = await GridSubstation.findAll();
+    // Resolve province -> district ids so we can scope by province.
+    let districtIds;
+    if (provinceId) {
+      const province = await Province.findById(provinceId);
+      if (!province) {
+        return res.status(404).json({ error: `Province ${provinceId} not found` });
+      }
+      const districts = await District.findByFilters({ provinceId });
+      districtIds = districts.map((d) => d.id);
+
+      // Province with no districts -> explicit empty result.
+      if (districtIds.length === 0) {
+        return res.status(200).json({ count: 0, data: [] });
+      }
+    }
+
+    // Combine both filters: a districtId outside the province yields no results.
+    let filters;
+    if (districtId && districtIds) {
+      filters = { districtId: districtIds.includes(districtId) ? districtId : undefined };
+      if (!filters.districtId) {
+        return res.status(200).json({ count: 0, data: [] });
+      }
+    } else if (districtId) {
+      filters = { districtId };
+    } else if (districtIds) {
+      filters = { districtIds };
+    } else {
+      filters = {};
+    }
+
+    const substations = await GridSubstation.findByFilters(filters);
     return res.status(200).json({ count: substations.length, data: substations });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to retrieve substations', details: err.message });

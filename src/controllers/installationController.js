@@ -10,42 +10,105 @@
  *   POST /api/installations/:installationId/readings -> createInstallationReading (nested)
  *   POST /api/installations                          -> createInstallation (collection)
  *
- * Optionally, listInstallations supports ?substationId=... to filter the collection.
+ * Optionally, listInstallations supports ?substationId=..., ?districtId=... and
+ * ?provinceId=... to filter the collection (each independently or combined).
  */
 
 const SolarInstallation = require('../models/SolarInstallaion');
 const GridSubstation = require('../models/Gridsubstation');
+const District = require('../models/Districs');
+const Province = require('../models/Province');
 const GenerationReading = require('../models/GenerationReading');
 
 // Fields required to create a GenerationReading. `installationId` is taken from
 // the URL, so it is not required in the request body.
 const REQUIRED_READING_FIELDS = ['id', 'timestamp', 'powerKw', 'cumulativeEnergyKwh', 'voltage'];
 
-// Fields required to create a SolarInstallation (matches the model's required
-// schema fields). `id`, `name` and `substationId` are mandatory; the remaining
-// attributes (meterId, inverterId, type, panelBrand, capacityKw, ...) are optional.
-const REQUIRED_INSTALLATION_FIELDS = ['id', 'name', 'substationId'];
+// Fields required to create a SolarInstallation. `id`, `substationId`, `meterId`
+// and `capacityKw` are mandatory; the remaining attributes are optional.
+const REQUIRED_INSTALLATION_FIELDS = ['id', 'substationId', 'meterId', 'capacityKw'];
+
+// A newly created installation is always recorded with this status, regardless
+// of any status value supplied by the client.
+const DEFAULT_INSTALLATION_STATUS = 'maintenance';
 
 // Identifier fields that must stay unique across installations: the business id
 // plus the physical device identifiers owned by the installation.
 const UNIQUE_INSTALLATION_FIELDS = ['id', 'meterId', 'inverterId'];
 
 // GET /api/installations
+// Optional filters (each independently or combined). Installations reference a
+// substation, so district/province scopes are resolved through the chain
+// province -> district -> substation -> installation:
+//   ?substationId=... -> installations directly on that substation
+//   ?districtId=...   -> installations on any substation in that district
+//   ?provinceId=...   -> installations on any substation in that province
 async function listInstallations(req, res) {
   try {
-    const { substationId } = req.query;
+    const { substationId, districtId, provinceId } = req.query;
 
-    // Optional scoping: filter installations by substation query parameter.
+    // Validate substationId when supplied.
     if (substationId) {
       const substation = await GridSubstation.findById(substationId);
       if (!substation) {
         return res.status(404).json({ error: `Substation ${substationId} not found` });
       }
-      const installations = await SolarInstallation.findBySubstation(substationId);
-      return res.status(200).json({ count: installations.length, data: installations });
     }
 
-    const installations = await SolarInstallation.findAll();
+    // Validate districtId when supplied.
+    if (districtId) {
+      const district = await District.findById(districtId);
+      if (!district) {
+        return res.status(404).json({ error: `District ${districtId} not found` });
+      }
+    }
+
+    // Resolve province -> district ids when supplied.
+    let districtIds;
+    if (provinceId) {
+      const province = await Province.findById(provinceId);
+      if (!province) {
+        return res.status(404).json({ error: `Province ${provinceId} not found` });
+      }
+      const districts = await District.findByFilters({ provinceId });
+      districtIds = districts.map((d) => d.id);
+      if (districtIds.length === 0) {
+        return res.status(200).json({ count: 0, data: [] });
+      }
+    }
+
+    // Combine districtId with a province scope: a district outside the province
+    // yields no results rather than silently ignoring the district filter.
+    let effectiveDistrictId = districtId;
+    if (districtId && districtIds && !districtIds.includes(districtId)) {
+      return res.status(200).json({ count: 0, data: [] });
+    }
+
+    // Resolve the district scope to substation ids (for district/province filters).
+    let substationIds;
+    if (effectiveDistrictId || districtIds) {
+      const substationFilter = effectiveDistrictId
+        ? { districtId: effectiveDistrictId }
+        : { districtIds };
+      const substations = await GridSubstation.findByFilters(substationFilter);
+      substationIds = substations.map((s) => s.id);
+      if (substationIds.length === 0) {
+        return res.status(200).json({ count: 0, data: [] });
+      }
+    }
+
+    // Build the installation filter. A direct substationId takes precedence as
+    // the most specific scope.
+    let filters;
+    if (substationId) {
+      filters = { substationId };
+    } else if (substationIds) {
+      filters = { substationIds };
+    } else {
+      filters = {};
+    }
+
+    const installations = await SolarInstallation.findByFilters(filters);
     return res.status(200).json({ count: installations.length, data: installations });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to retrieve installations', details: err.message });
@@ -96,7 +159,8 @@ async function createInstallation(req, res) {
     }
 
     // 5. Build the installation, keeping only known schema fields so unexpected
-    //    client input cannot be persisted.
+    //    client input cannot be persisted. `status` is always forced to the
+    //    default ("maintenance") regardless of any client-supplied value.
     const installationData = {
       id: body.id,
       name: body.name,
@@ -107,7 +171,7 @@ async function createInstallation(req, res) {
       panelBrand: body.panelBrand,
       capacityKw: body.capacityKw,
       commissionDate: body.commissionDate,
-      status: body.status,
+      status: DEFAULT_INSTALLATION_STATUS,
     };
 
     // 6. Save to MongoDB and return the created resource.

@@ -57,4 +57,22 @@ GridSubstation.findByDistrict = function findByDistrict(districtId) {
   return GridSubstation.find({ districtId }, PROJECTION).lean();
 };
 
+/**
+ * Find substations matching optional filters. Both filters are optional and may
+ * be combined; when neither is provided every substation is returned.
+ * @param {{districtId?: string, districtIds?: string[]}} [filters] `districtId`
+ *   matches a single district; `districtIds` matches any district in the list
+ *   (used for province-scoped lookups resolved to their districts upstream).
+ * @returns {Promise<Array<Object>>} lean plain objects.
+ */
+GridSubstation.findByFilters = function findByFilters(filters = {}) {
+  const query = {};
+  if (filters.districtId) {
+    query.districtId = filters.districtId;
+  } else if (Array.isArray(filters.districtIds)) {
+    query.districtId = { $in: filters.districtIds };
+  }
+  return GridSubstation.find(query, PROJECTION).lean();
+};
+
 module.exports = GridSubstation;
