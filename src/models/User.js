@@ -6,9 +6,9 @@
  *               (optional linkage used later for authorisation scoping)
  *
  * Backed by the `users` collection, e.g.
- *   { "_id": ObjectId, "id": "USER-01", "username": "admin",
- *     "fullName": "System Administrator", "email": "admin@solargrid.lk",
- *     "role": "admin", "passwordHash": "$2a$10$...", "roleId": "national" }
+ *   { "_id": ObjectId, "id": "USER-01", "email": "admin@solargrid.lk",
+ *     "role": "admin", "roleId": "national", "name": "admin",
+ *     "active": true, "passwordHash": "$2a$10$..." }
  *   Some users also include: "assignedSubstationIds": ["SUB-01", "SUB-02"]
  *
  * `roleId` carries the access scope for the user, e.g. "national" (SLSEA HQ)
@@ -25,12 +25,12 @@ const { schemaOptions, PROJECTION } = require('./mongooseOptions');
 const userSchema = new mongoose.Schema(
   {
     id: { type: String, required: true, unique: true, index: true },
-    username: { type: String, required: true },
-    fullName: { type: String },
+    name: { type: String, required: true },
     email: { type: String },
     role: { type: String }, // e.g. "admin", "operator"
     passwordHash: { type: String }, // stored credential; not validated here yet
     roleId: { type: String }, // access scope, e.g. "national" or "PROV-01"
+    active: { type: Boolean }, // whether the account is enabled
     assignedSubstationIds: { type: [String], default: undefined }, // optional scoping
   },
   schemaOptions('users')
@@ -47,11 +47,11 @@ User.findById = function findById(id) {
 };
 
 /**
- * Find a single user by username (used later for authentication).
+ * Find a single user by email (used later for authentication).
  * @returns {Promise<Object|null>} lean plain object, or null when not found.
  */
-User.findByUsername = function findByUsername(username) {
-  return User.findOne({ username }, PROJECTION).lean();
+User.findByEmail = function findByEmail(email) {
+  return User.findOne({ email }, PROJECTION).lean();
 };
 
 /**
@@ -60,6 +60,21 @@ User.findByUsername = function findByUsername(username) {
  */
 User.findAll = function findAll() {
   return User.find({}, PROJECTION).lean();
+};
+
+/**
+ * Create a new user.
+ * @param {Object} data User fields (id, name, email, role, roleId, active,
+ *   passwordHash, and optional assignedSubstationIds).
+ * @returns {Promise<Object>} the created lean plain object.
+ */
+User.createUser = function createUser(data) {
+  return User.create(data).then((doc) => {
+    const obj = doc.toObject();
+    delete obj._id;
+    delete obj.__v;
+    return obj;
+  });
 };
 
 /**
@@ -74,5 +89,4 @@ User.deleteById = function deleteById(id) {
 };
 
 module.exports = User;
-
 

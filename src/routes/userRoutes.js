@@ -11,10 +11,12 @@ const userController = require('../controllers/userController');
 
 // Collection
 router.get('/', userController.listUsers);
+router.post('/', userController.createUser);
 
 // Individual resource
 router.get('/:userId', userController.getUserById);
 router.delete('/:userId', userController.deleteUser);
 
 module.exports = router;
+
 
